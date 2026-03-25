@@ -1,0 +1,301 @@
+
+<style>
+  .root{padding:1rem 0;color:var(--color-text-primary);font-size:15px}
+  .toggle{display:flex;gap:0;margin-bottom:1.2rem;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;width:fit-content}
+  .toggle button{padding:6px 18px;font-size:13px;font-weight:500;background:transparent;border:none;cursor:pointer;color:var(--color-text-secondary);transition:background .15s,color .15s}
+  .toggle button.active{background:var(--color-background-info);color:var(--color-text-info)}
+  .sec{font-size:11px;color:var(--color-text-secondary);letter-spacing:.04em;text-transform:uppercase;margin:1.1rem 0 .5rem}
+  .row{display:flex;align-items:center;gap:12px;margin-bottom:.9rem}
+  .row label{font-size:13px;color:var(--color-text-secondary);width:42px;text-align:right}
+  .row input[type=range]{flex:1}
+  .val{font-size:14px;font-weight:500;min-width:44px;font-family:var(--font-mono)}
+  .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:1rem 0}
+  .metric{background:var(--color-background-secondary);border-radius:8px;padding:.65rem .9rem}
+  .metric .ml{font-size:11px;color:var(--color-text-secondary);margin-bottom:3px}
+  .metric .mv{font-size:18px;font-weight:500;font-family:var(--font-mono)}
+  .verdict{padding:.7rem 1rem;border-radius:8px;font-size:14px;font-weight:500;margin:.8rem 0}
+  .verdict.lottery{background:var(--color-background-info);color:var(--color-text-info)}
+  .verdict.certain{background:var(--color-background-danger);color:var(--color-text-danger)}
+  .verdict.neutral{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .boundary{font-size:13px;padding:.7rem 1rem;border-left:3px solid var(--color-border-primary);background:var(--color-background-secondary);margin:.5rem 0;line-height:1.7;border-radius:0}
+  .chart-wrap{position:relative;width:100%;height:220px;margin-bottom:.5rem}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--color-text-secondary);margin-bottom:.8rem}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .ld{width:18px;height:2.5px;border-radius:2px}
+  .eps-row{transition:opacity .2s}
+</style>
+<div class="root">
+
+  <div class="sec">確率加重関数</div>
+  <div class="toggle">
+    <button id="btn-tk" class="active" onclick="setMode('tk')">T&K式  w(p,γ)</button>
+    <button id="btn-fe" onclick="setMode('fe')">F_ε式  F_ε(p)</button>
+  </div>
+
+  <div class="sec">パラメータ</div>
+  <div class="row">
+    <label>α</label>
+    <input type="range" id="alpha" min="0.3" max="1.2" step="0.01" value="0.88">
+    <span class="val" id="alpha-out">0.88</span>
+  </div>
+  <div class="row" id="gamma-row">
+    <label>γ</label>
+    <input type="range" id="gamma" min="0.1" max="1.2" step="0.01" value="0.69">
+    <span class="val" id="gamma-out">0.69</span>
+  </div>
+  <div class="row eps-row" id="eps-row" style="opacity:.3;pointer-events:none">
+    <label>ε</label>
+    <input type="range" id="eps" min="1" max="35" step="1" value="25">
+    <span class="val" id="eps-out">25</span>
+  </div>
+
+  <div class="sec">評価値</div>
+  <div class="metrics">
+    <div class="metric"><div class="ml">V(くじ)</div><div class="mv" id="v-lottery">—</div></div>
+    <div class="metric"><div class="ml">V(確実 100万)</div><div class="mv" id="v-certain">—</div></div>
+    <div class="metric"><div class="ml">差 ΔV</div><div class="mv" id="v-diff">—</div></div>
+  </div>
+  <div class="verdict neutral" id="verdict-box">モードを選択してください</div>
+
+  <div class="sec">境界値</div>
+  <div class="boundary" id="boundary-box">計算中...</div>
+
+  <div class="sec">確率加重関数 w(p)</div>
+  <div class="chart-wrap"><canvas id="wpChart"></canvas></div>
+  <div class="legend" id="wp-legend">
+    <span><span class="ld" style="background:#185FA5"></span><span id="leg1">w(p, γ)</span></span>
+    <span><span class="ld" style="background:#B4B2A9;border-top:1.5px dashed #B4B2A9;height:0"></span>対角線</span>
+  </div>
+
+  <div class="sec">V(くじ) vs V(確実) — パラメータ変化</div>
+  <div class="chart-wrap"><canvas id="gammaChart"></canvas></div>
+  <div class="legend" id="g-legend">
+    <span><span class="ld" style="background:#185FA5"></span>V(くじ)</span>
+    <span><span class="ld" style="background:#D85A30"></span>V(確実 100万)</span>
+  </div>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let mode = 'tk';
+
+function logit(x){return Math.log(x/(1-x));}
+
+function wTK(p,gamma){
+  if(p<=0)return 0; if(p>=1)return 1;
+  const pg=Math.pow(p,gamma);
+  return pg/Math.pow(pg+Math.pow(1-p,gamma),1/gamma);
+}
+
+//function wFe(p,eps){
+//  if(p<=0)return 0; if(p>=1)return 1;
+//  const lo=eps, hi=1-eps;
+//  const Z=2*Math.log((1-eps)/eps);
+//  if(p<=lo) return 0;
+//  if(p>=hi) return 1;
+//  return (logit(p)-logit(lo))/Z;
+//}
+
+function wFe(p,Z){
+  if(p<=0)return 0; if(p>=1)return 1;
+  let f = (1 - Math.log(p)-Math.log(1-p));
+  return f/Z;
+}
+
+
+function getW(p){
+  const gamma=parseFloat(document.getElementById('gamma').value);
+  const eps=parseFloat(document.getElementById('eps').value);
+  return mode==='tk'? wTK(p,gamma) : wFe(p,eps);
+}
+
+function v(x,alpha){return x<=0?0:Math.pow(x,alpha);}
+
+function vLottery(alpha){
+  const w10=getW(0.10), w99=getW(0.99);
+  return w10*v(500,alpha)+(w99-w10)*v(100,alpha);
+}
+function vCertain(alpha){return v(100,alpha);}
+
+function findBoundary(alpha){
+  const lo0=0.01, hi0=2.0;
+  const gamma=parseFloat(document.getElementById('gamma').value);
+  const eps=parseFloat(document.getElementById('eps').value);
+
+  if(mode==='tk'){
+    const atLo=vLotteryAt(alpha,lo0,'tk',gamma,eps)-vCertain(alpha);
+    const atHi=vLotteryAt(alpha,hi0,'tk',gamma,eps)-vCertain(alpha);
+    if(atLo*atHi>0) return null;
+    let lo=lo0,hi=hi0;
+    for(let i=0;i<80;i++){
+      const mid=(lo+hi)/2;
+      const dv=vLotteryAt(alpha,mid,'tk',gamma,eps)-vCertain(alpha);
+      if(atLo*dv<0) hi=mid; else lo=mid;
+    }
+    return {val:(lo+hi)/2, param:'γ*'};
+  } else {
+    const lo0e=0.001, hi0e=0.499;
+    const atLo=vLotteryAt(alpha,gamma,mode,lo0e)-vCertain(alpha);
+    const atHi=vLotteryAt(alpha,gamma,mode,hi0e)-vCertain(alpha);
+    if(atLo*atHi>0) return null;
+    let lo=lo0e,hi=hi0e;
+    for(let i=0;i<80;i++){
+      const mid=(lo+hi)/2;
+      const dv=vLotteryAt(alpha,gamma,mode,mid)-vCertain(alpha);
+      if(atLo*dv<0) hi=mid; else lo=mid;
+    }
+    return {val:(lo+hi)/2, param:'ε*'};
+  }
+}
+
+function vLotteryAt(alpha,gamma_,mode_,eps_){
+  function wAt(p){
+    return mode_==='tk'? wTK(p,gamma_) : wFe(p,eps_);
+  }
+  const w10=wAt(0.10), w99=wAt(0.99);
+  return w10*v(500,alpha)+(w99-w10)*v(100,alpha);
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('btn-tk').className=m==='tk'?'active':'';
+  document.getElementById('btn-fe').className=m==='fe'?'active':'';
+  const epsr=document.getElementById('eps-row');
+  const gammar=document.getElementById('gamma-row');
+  if(m==='fe'){
+    epsr.style.opacity='1'; epsr.style.pointerEvents='auto';
+  } else {
+    epsr.style.opacity='.3'; epsr.style.pointerEvents='none';
+  }
+  update();
+}
+
+let wpChart=null, gammaChart=null;
+
+function update(){
+  const alpha=parseFloat(document.getElementById('alpha').value);
+  const gamma=parseFloat(document.getElementById('gamma').value);
+  const eps=parseFloat(document.getElementById('eps').value);
+  document.getElementById('alpha-out').textContent=alpha.toFixed(2);
+  document.getElementById('gamma-out').textContent=gamma.toFixed(2);
+  document.getElementById('eps-out').textContent=eps.toFixed(3);
+
+  const vL=vLottery(alpha);
+  const vC=vCertain(alpha);
+  const diff=vL-vC;
+  document.getElementById('v-lottery').textContent=vL.toFixed(3);
+  document.getElementById('v-certain').textContent=vC.toFixed(3);
+  document.getElementById('v-diff').textContent=(diff>=0?'+':'')+diff.toFixed(3);
+
+  const vb=document.getElementById('verdict-box');
+  if(diff>0.0001){vb.className='verdict lottery';vb.textContent='くじ選好（リスク追求）— 確実性効果なし';}
+  else if(diff<-0.0001){vb.className='verdict certain';vb.textContent='確実性効果あり — 確実な100万円を選好';}
+  else {vb.className='verdict neutral';vb.textContent='無差別（境界付近）';}
+
+  const bnd=findBoundary(alpha);
+  const bb=document.getElementById('boundary-box');
+  if(bnd){
+    if(mode==='tk'){
+      bb.textContent=`α=${alpha.toFixed(2)} のとき γ* ≈ ${bnd.val.toFixed(4)}　（γ > γ* で確実性効果）`;
+    } else {
+      bb.textContent=`α=${alpha.toFixed(2)}, γ=${gamma.toFixed(2)} のとき ε* ≈ ${bnd.val.toFixed(4)}　（ε < ε* で確実性効果）`;
+    }
+  } else {
+    bb.textContent='この α では境界値が [0,2] の範囲に存在しません';
+  }
+
+  updateWpChart(gamma,eps);
+  updateGammaChart(alpha,gamma,eps);
+}
+
+function updateWpChart(gamma,eps){
+  const ps=Array.from({length:101},(_,i)=>i/100);
+  const ws=ps.map(p=>mode==='tk'? wTK(p,gamma): wFe(p,eps));
+  document.getElementById('leg1').textContent=mode==='tk'?`w(p, γ=${gamma.toFixed(2)})`:`F_ε(p, ε=${eps.toFixed(3)})`;
+  if(wpChart){wpChart.data.datasets[0].data=ws;wpChart.update();return;}
+  wpChart=new Chart(document.getElementById('wpChart'),{
+    type:'line',
+    data:{labels:ps.map(p=>p.toFixed(2)),datasets:[
+      {data:ws,borderColor:'#185FA5',borderWidth:2,pointRadius:0,fill:false},
+      {data:ps,borderColor:'#B4B2A9',borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      elements:{point:{radius:0}},
+      scales:{
+        x:{ticks:{maxTicksLimit:6},title:{display:true,text:'p',color:'#888'}},
+        y:{min:0,max:1,ticks:{maxTicksLimit:6},title:{display:true,text:'w(p)',color:'#888'}}
+      }}
+  });
+}
+
+function updateGammaChart(alpha, gamma, eps) {
+  let labels, vLs;
+
+  if (mode === 'tk') {
+    // T&Kモード: γ（ガンマ）を変化させる
+    const gs = Array.from({ length: 110 }, (_, i) => 0.1 + i * 0.01);
+    labels = gs.map(g => g.toFixed(2)); // 横軸の数値をγに設定
+    vLs = gs.map(g => vLotteryAt(alpha, g, 'tk', eps));
+    document.getElementById('g-legend').innerHTML =
+      '<span><span class="ld" style="background:#185FA5"></span>V(くじ) vs γ</span>' +
+      '<span><span class="ld" style="background:#D85A30"></span>V(確実 100万)</span>';
+  } else {
+    // F_εモード: ε（イプシロン）を変化させる
+    //const es = Array.from({ length: 110 }, (_, i) => 0.001 + i * 0.01);
+    const es = Array.from({ length: 148 }, (_, i) => 5 + i * 0.1);
+    labels = es.map(e => e.toFixed(3)); // 横軸の数値をεに設定
+    vLs = es.map(e => vLotteryAt(alpha, gamma, 'fe', e));
+    document.getElementById('g-legend').innerHTML =
+      '<span><span class="ld" style="background:#185FA5"></span>V(くじ) vs ε</span>' +
+      '<span><span class="ld" style="background:#D85A30"></span>V(確実 100万)</span>';
+  }
+
+  const vCs = new Array(labels.length).fill(vCertain(alpha));
+
+  // すでにチャートが存在する場合の更新処理
+  if (gammaChart) {
+    gammaChart.data.labels = labels;
+    gammaChart.data.datasets[0].data = vLs;
+    gammaChart.data.datasets[1].data = vCs;
+    
+    // 【修正箇所】横軸のタイトルをモードに応じて明示的に更新
+    gammaChart.options.scales.x.title.text = (mode === 'tk' ? 'γ' : 'ε');
+    
+    gammaChart.update();
+    return;
+  }
+
+  // 初回描画時の設定
+  gammaChart = new Chart(document.getElementById('gammaChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { data: vLs, borderColor: '#185FA5', borderWidth: 2, pointRadius: 0, fill: false },
+        { data: vCs, borderColor: '#D85A30', borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      elements: { point: { radius: 0 } },
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 8, autoSkip: true },
+          title: { 
+            display: true, 
+            text: mode === 'tk' ? 'γ' : 'ε', // 初期設定
+            color: '#888' 
+          }
+        },
+        y: { title: { display: true, text: 'V', color: '#888' } }
+      }
+    }
+  });
+}
+
+['alpha','gamma','eps'].forEach(id=>document.getElementById(id).addEventListener('input',update));
+update();
+</script>
