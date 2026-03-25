@@ -31,7 +31,7 @@ Braessパラドックスを含む離散Hodge分解の簡易シミュレーター
 リグレット空間の変形（ねじれ場と相互排除的な流れ）をベルトラミ方程式として数値シミュレーションするツールです．
 
 - Google Colaboratory：https://colab.research.google.com/drive/1D4Prtt0XNveah8QT5130zeeavNzjR13?usp=sharing
-- チャットログ：https://claude.ai/share/2da343cf-d0bc40c5-bb02-14e4604c8455
+- チャットログ：https://claude.ai/share/2da343cf-d0bc-40c5-bb02-14e4604c8455
 
 ---
 
