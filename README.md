@@ -9,12 +9,13 @@
 
 ## 収録ファイル
 
+以下のアーティファクトとチャットログのコピーを本レポジトリに追加してあります．
+
 ### 1. 確率ウェイト関数の視覚化ツール（付録D・第1節）
 
 累積プロスペクト理論（CPT）の確率ウェイト関数を視覚化し，アレのパラドックス（共通結果効果CCE例題）の再現を確認するツールです．
 
 - Claude.ai アーティファクト：https://claude.ai/public/artifacts/bc798d90-652e-4554-93d1-98b84885a4dd
-- 上記アーティファクトのコピー（本サイト）
 - チャットログ：https://claude.ai/share/fd48e317-7535-485a-88b7-82ad1a2ca245
 
 ### 2. ネットワークの離散Hodge分解シミュレーター（付録D・第6節）
@@ -22,7 +23,6 @@
 Braessパラドックスを含む離散Hodge分解の簡易シミュレーターです．
 
 - Claude.ai アーティファクト：https://claude.ai/public/artifacts/cd093af5-a1e8-4798-8f89-8e274b87d7a6
-- 上記アーティファクトのコピー（本サイト）
 - 制作プロセスのチャット履歴（claude.ai）：https://claude.ai/share/66344bc5-2b0c-4672-a071-67a34f6c84a0
 - 注意：本実装はグラフの離散ホッジ分解を視覚化しインタラクティブに確認することを目的した簡易ツールです．数学的な厳密さについては未検討です（harm=0問題、Gram-Schmidt直交化の近似など）．もともとのホッジ分解はリーマン多様体上の微妙な条件下で計算されるものですが，離散版は実用性に重きが置かれます．離散ホッジ分解の理論的背景はJiang, Lim, Yao, Ye (2011）など参考にしてください. topological data analysis関係でのgithubリポジトリもいくつか見つかります．
 
@@ -32,6 +32,7 @@ Braessパラドックスを含む離散Hodge分解の簡易シミュレーター
 
 - Google Colaboratory：https://colab.research.google.com/drive/1D4Prtt0XNveah8QT5130zeeavNzjR13?usp=sharing
 - チャットログ：https://claude.ai/share/2da343cf-d0bc-40c5-bb02-14e4604c8455
+
 
 ---
 
